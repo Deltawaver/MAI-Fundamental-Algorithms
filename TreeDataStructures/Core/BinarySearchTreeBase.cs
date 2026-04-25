@@ -189,13 +189,13 @@ public abstract class BinarySearchTreeBase<TKey, TValue, TNode>(IComparer<TKey>?
     {
         TNode? y = x.Right;
         if (y == null) return;
-        
-        // Перемещаем левое поддерево y к правому поддереву x
+
         x.Right = y.Left;
         if (y.Left != null)
+        {
             y.Left.Parent = x;
+        }
         
-        // Устанавливаем родителя y
         y.Parent = x.Parent;
         
         if (x.Parent == null)
@@ -211,108 +211,75 @@ public abstract class BinarySearchTreeBase<TKey, TValue, TNode>(IComparer<TKey>?
             x.Parent.Right = y;
         }
         
-        // x становится левым ребенком y
         y.Left = x;
         x.Parent = y;
+
     }
 
     protected void RotateRight(TNode y)
     {
         TNode? x = y.Left;
-        if (x == null) return;
-        
-        // Перемещаем правое поддерево x к левому поддереву y
+        if(x == null) return;
+
         y.Left = x.Right;
         if (x.Right != null)
-            x.Right.Parent = y;
-        
-        // Устанавливаем родителя x
-        x.Parent = y.Parent;
-        
-        if (y.Parent == null)
         {
-            Root = x;
+            x.Right.Parent = y;
         }
-        else if (y.IsLeftChild)
+
+        x.Parent = y.Parent;
+
+        if(y.Parent == null) {
+            Root = x;
+        } else if (y.IsLeftChild)
         {
             y.Parent.Left = x;
-        }
-        else
+        } else
         {
             y.Parent.Right = x;
         }
-        
-        // y становится правым ребенком x
+
         x.Right = y;
         y.Parent = x;
     }
     
     protected void RotateBigLeft(TNode x)
     {
-        // Большой левый поворот: сначала правый поворот на правом ребенке, затем левый на x
-        if (x.Right != null)
-            RotateRight(x.Right);
+        TNode? temp = x.Right;
+        if(temp == null) return;
+        if(temp.Left == null) return;
+
+        RotateRight(temp);
         RotateLeft(x);
     }
     
     protected void RotateBigRight(TNode y)
     {
-        // Большой правый поворот: сначала левый поворот на левом ребенке, затем правый на y
-        if (y.Left != null)
-            RotateLeft(y.Left);
+        TNode? temp = y.Left;
+        if(temp == null) return;
+        if(temp.Right == null) return;
+
+        RotateLeft(temp);
         RotateRight(y);
     }
     
     protected void RotateDoubleLeft(TNode x)
     {
-        // 1. Проверяем возможность первого поворота
-        if (x.Left == null) return;
-        // Сохраняем ссылку на будущего нового корня (левый ребенок) ДО поворота, 
-        // но будьте осторожны: после поворота связи изменятся.
-        // На самом деле, после RotateLeft(x), узел x.Left (назовем его Y) станет родителем X.
-        // Значит, для второго поворота нам нужно крутить Y.
-        // Выполняем первый левый поворот
         RotateLeft(x);
-        // После RotateLeft(x):
-        // - Старый x.Left (назовем Y) теперь стоит на месте x.
-        // - Старый x теперь является Right-ребенком Y.
-        // Нам нужно сделать левый поворот вокруг Y.
-        // Где взять Y? Y теперь родитель x (так как x опустился вправо).
-        TNode? y = x.Parent;
-        // Если x был корнем, то Parent не обновился (остался null), но Root изменился.
-        // В этом случае Y - это новый Root.
-        if (y == null)
+        TNode? temp = x.Parent;
+        if (temp?.Right != null)
         {
-            y = Root;
-        }
-        // 2. Проверяем возможность второго поворота
-        if (y != null && y.Left != null)
-        {
-            RotateLeft(y);
+            RotateLeft(temp);
         }
     }
     
     protected void RotateDoubleRight(TNode y)
     {
-        // 1. Проверяем возможность первого поворота
-        if (y.Right == null) return;
-        // Выполняем первый правый поворот
         RotateRight(y);
-        // После RotateRight(y):
-        // - Старый y.Right (назовем X) теперь стоит на месте y.
-        // - Старый y теперь является Left-ребенком X.
-        // Нам нужно сделать правый поворот вокруг X.
-        // X теперь родитель y.
-        TNode? x = y.Parent;
-        // Если y был корнем, Parent null, значит берем Root
-        if (x == null)
+        TNode? temp = y.Parent;
+        if (temp?.Left != null)
         {
-            x = Root;
-        }
-        // 2. Проверяем возможность второго поворота
-        if (x != null && x.Right != null)
-        {
-            RotateRight(x);
+            RotateRight(temp);
         }
     }
     
