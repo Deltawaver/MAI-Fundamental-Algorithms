@@ -10,8 +10,15 @@ namespace Arithmetic.BigInt;
 
 public sealed class BetterBigInteger : IBigInteger
 {
-    private const int WordBitSize = 32;
+    // Размер одного слова в битах (uint = 4 байта * 8 бит)
+    private const int WordBitSize = sizeof(uint) * 8;
     
+    // Половина размера слова для разбиения при умножении (16 бит)
+    private const int HalfWordBits = WordBitSize / 2;
+    
+    // Маска для выделения младшей половины слова (0xFFFF)
+    private const uint LowWordMask = (1u << HalfWordBits) - 1;
+
     // Критерии выбора стратегии умножения
     private const int ThresholdSimple = 32;
     private const int ThresholdKaratsuba = 128;
@@ -390,29 +397,30 @@ public sealed class BetterBigInteger : IBigInteger
     
     private static void MultiplyWord(uint x, uint y, out uint low, out uint high)
     {
-        uint xLow = x & 0xFFFFu;
-        uint xHigh = x >> 16;
-        uint yLow = y & 0xFFFFu;
-        uint yHigh = y >> 16;
+        // Используем константы вместо магических чисел 16 и 0xFFFF
+        uint xLow = x & LowWordMask;
+        uint xHigh = x >> HalfWordBits;
+        uint yLow = y & LowWordMask;
+        uint yHigh = y >> HalfWordBits;
         
         uint p00 = xLow * yLow;
         uint p01 = xLow * yHigh;
         uint p10 = xHigh * yLow;
         uint p11 = xHigh * yHigh;
         
-        uint mid = p00 >> 16;
+        uint mid = p00 >> HalfWordBits;
         uint carry = 0;
         
-        uint sum = mid + (p01 & 0xFFFFu);
+        uint sum = mid + (p01 & LowWordMask);
         if (sum < mid) carry++;
         mid = sum;
         
-        sum = mid + (p10 & 0xFFFFu);
-        if (sum < (mid & 0xFFFFu)) carry++;
+        sum = mid + (p10 & LowWordMask);
+        if (sum < (mid & LowWordMask)) carry++;
         mid = sum;
         
-        low = (p00 & 0xFFFFu) | ((mid & 0xFFFFu) << 16);
-        high = p11 + (p01 >> 16) + (p10 >> 16) + (mid >> 16) + carry;
+        low = (p00 & LowWordMask) | ((mid & LowWordMask) << HalfWordBits);
+        high = p11 + (p01 >> HalfWordBits) + (p10 >> HalfWordBits) + (mid >> HalfWordBits) + carry;
     }
     
     private static void PropagateCarry(uint[] array, int index, uint value)
@@ -612,6 +620,7 @@ public sealed class BetterBigInteger : IBigInteger
         }
         
         uint carry = 0;
+        // Вычисляем маску динамически
         uint mask = (1u << bitShift) - 1u;
         
         for (int i = len - 1; i >= wordShift; i--)
@@ -760,7 +769,7 @@ public sealed class BetterBigInteger : IBigInteger
     
     private static BetterBigInteger FromTwoComplement(uint[] words)
     {
-        bool negative = (words[^1] & 0x80000000u) != 0;
+        bool negative = (words[^1] & (1u << (WordBitSize - 1))) != 0;
         
         if (!negative)
             return FromMagnitude(words, false);
@@ -827,3 +836,5 @@ public sealed class BetterBigInteger : IBigInteger
     
     #endregion
 }
+
+#dotnet test Arithmetic.Tests/ -v normal
